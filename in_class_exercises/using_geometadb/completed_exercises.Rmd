@@ -1,0 +1,125 @@
+---
+title: "completed_exercises"
+output: html_document
+---
+
+```{r}
+if (!requireNamespace("BiocManager", quietly = TRUE))
+  install.packages("BiocManager")
+if (!requireNamespace("GEOmetadb", quietly = TRUE))
+  BiocManager::install("GEOmetadb")
+if (!requireNamespace("DBI", quietly = TRUE))
+  install.packages("DBI")
+if (!requireNamespace("RSQLite", quietly = TRUE))
+  install.packages("RSQLite")
+if (!requireNamespace("dplyr", quietly = TRUE))
+  install.packages("dplyr")
+if (!requireNamespace("ggplot2", quietly = TRUE))
+  install.packages("ggplot2")
+```
+
+```{r}
+library(GEOmetadb)
+if (!file.exists('GEOmetadb.sqlite')) getSQLiteFile()
+file.info('GEOmetadb.sqlite')
+library(DBI)
+library(RSQLite)
+con <- dbConnect(SQLite(), 'GEOmetadb.sqlite')
+```
+GSE IDs: “GSE201427”,“GSE166530”,“GSE162183”,“GSE186458”
+
+Questions per GSE
+
+What type of data is it? Describe it. (platform technology; e.g., high-throughput sequencing, array)
+What disease or model is it using? (infer from series title/summary/platform organism)
+How many samples are there? What type of data is associated with the record?
+How many control and how many disease?
+**Can you find out any information about the GEO dataset - GSE264108. Why or Why not?
+
+
+```{r}
+sql <- paste(
+  "SELECT DISTINCT gse.gse, gse.overall_design, gse.type, gsm.type, gse.title, gse.summary, gsm.title, gsm.gpl, gsm.source_name_ch1, gsm.characteristics_ch1, gse.supplementary_file",
+  "FROM gse JOIN gse_gsm ON gse_gsm.gse = gse.gse",
+  "JOIN gsm ON gse_gsm.gsm = gsm.gsm",
+  "WHERE gse_gsm.gse = 'GSE201427'"
+)
+dbGetQuery(con, sql)
+```
+1. The GSE201427 study uses high throughoutput sequencing for expression profilling.
+2. A cell line for cancer is used where the effect of a siRNA is investigated for knock-down of SF3B1 splicing factor.
+3. There are 8 samples used in the study and the associated data is RNA-seq with provided counts per million files.
+4. Within the 8 samples 5 correspond to control and 3 are the siSF3B1 positive group.
+
+
+```{r}
+sql <- paste(
+  "SELECT DISTINCT gse.gse, gse.overall_design, gse.type, gsm.type, gse.title, gse.summary, gsm.title, gsm.gpl, gsm.source_name_ch1, gsm.characteristics_ch1, gse.supplementary_file",
+  "FROM gse JOIN gse_gsm ON gse_gsm.gse = gse.gse",
+  "JOIN gsm ON gse_gsm.gsm = gsm.gsm",
+  "WHERE gse_gsm.gse = 'GSE166530'"
+)
+dbGetQuery(con, sql)
+```
+1. The GSE166530 study is high throughput sequencing of RNA expression profiling.
+2. It is using a disease model for COVID-19 sampled from humans.
+3. There are 10 samples included in the study. Each sample has associated RNA-seq data.
+4. The 10 samples are composed of an equal split of 5 control and 5 positive for COVID-19.
+
+
+```{r}
+sql <- paste(
+  "SELECT DISTINCT gse.gse, gse.overall_design, gse.type, gsm.type, gse.title, gse.summary, gsm.title, gsm.gpl, gsm.source_name_ch1, gsm.characteristics_ch1, gse.supplementary_file",
+  "FROM gse JOIN gse_gsm ON gse_gsm.gse = gse.gse",
+  "JOIN gsm ON gse_gsm.gsm = gsm.gsm",
+  "WHERE gse_gsm.gse = 'GSE162183'"
+)
+dbGetQuery(con, sql)
+```
+1. The GSE162183 study is high throughput sequencing of single cell RNA-seq.
+2. It is using tissue samples from psoriasis and control donors as a model for the psoriasis disease.
+3. There are 6 samples where each sample undergoes 10 replicates of scRNA-seq.
+4. The samples are half control and half positive with 3 corresponding to either group. Each has associated single cell RNA sequencing data with provided the provided gene expression matrices.
+
+
+```{r}
+sql <- paste(
+  "SELECT DISTINCT gse.gse, gse.overall_design, gse.type, gsm.type, gse.title, gse.summary, gsm.title, gsm.gpl, gsm.source_name_ch1, gsm.characteristics_ch1, gse.supplementary_file",
+  "FROM gse JOIN gse_gsm ON gse_gsm.gse = gse.gse",
+  "JOIN gsm ON gse_gsm.gsm = gsm.gsm",
+  "WHERE gse_gsm.gse = 'GSE186458'"
+)
+dbGetQuery(con, sql)
+```
+
+1. The GSE186458 study is high throughput sequencing of methylation profiles. Specifically looking at DNA methylation patterns in adults with the use of deep whole-genome bisulfite sequencing.
+2. It is not using a disease, the study models the human methylome to gain a better understanding of regulatory elements within specific cell types.
+3. There are 253 samples in this study with bed files containing the methylation signal provided per sample.
+4. There is not a distinction between control and disease in this study, only in tissue-region as samples are collected throughout the body for example aorta and lung tissues.
+
+```{r}
+sql <- paste(
+  "SELECT DISTINCT gse.gse, gse.overall_design, gse.type, gsm.type, gse.title, gse.summary, gsm.title, gsm.gpl, gsm.source_name_ch1, gsm.characteristics_ch1, gse.supplementary_file",
+  "FROM gse JOIN gse_gsm ON gse_gsm.gse = gse.gse",
+  "JOIN gsm ON gse_gsm.gsm = gsm.gsm",
+  "WHERE gse_gsm.gse = 'GSE264108'"
+)
+dbGetQuery(con, sql)
+
+
+sql <- paste(
+  "SELECT DISTINCT gse.gse, gse.overall_design, gse.type, gse.supplementary_file",
+  "FROM gse",
+  "WHERE gse.gse = 'GSE264108'"
+)
+dbGetQuery(con, sql)
+```
+
+The GEO data set GSE264108 has no information present as the dataset is not currently listed in the active database, it has potentially been retired or is no longer accessible.
+
+
+
+
+
+
+

@@ -26,7 +26,7 @@ ask reproducible questions in SQL from R, and shortlist RNA-seq series.</p>" />
 <meta name="author" content="Ruth Isserlin" />
 
 
-<meta name="date" content="2026-01-19" />
+<meta name="date" content="2026-01-28" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -167,7 +167,10 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <li class="chapter" data-level="5.4" data-path="finding-datasets-of-interest.html"><a href="finding-datasets-of-interest.html#heuristic-require-a-counts-like-supplementary-file"><i class="fa fa-check"></i><b>5.4</b> Heuristic: require a counts-like supplementary file</a></li>
 <li class="chapter" data-level="5.5" data-path="finding-datasets-of-interest.html"><a href="finding-datasets-of-interest.html#require-a-minimum-number-of-samples-per-series"><i class="fa fa-check"></i><b>5.5</b> Require a minimum number of samples per series</a></li>
 </ul></li>
-<li class="chapter" data-level="6" data-path="exercises-inspect-specific-geo-series.html"><a href="exercises-inspect-specific-geo-series.html"><i class="fa fa-check"></i><b>6</b> Exercises: Inspect Specific GEO Series</a></li>
+<li class="chapter" data-level="6" data-path="exercises-inspect-specific-geo-series.html"><a href="exercises-inspect-specific-geo-series.html"><i class="fa fa-check"></i><b>6</b> Exercises: Inspect Specific GEO Series</a>
+<ul>
+<li class="chapter" data-level="6.1" data-path="exercises-inspect-specific-geo-series.html"><a href="exercises-inspect-specific-geo-series.html#exercise-answers"><i class="fa fa-check"></i><b>6.1</b> Exercise Answers:</a></li>
+</ul></li>
 <li class="chapter" data-level="7" data-path="next-week-next-steps.html"><a href="next-week-next-steps.html"><i class="fa fa-check"></i><b>7</b> Next week / Next steps</a></li>
 </ul>
 
@@ -230,20 +233,13 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <span id="cb21-11"><a href="finding-datasets-of-interest.html#cb21-11" tabindex="-1"></a><span class="fu">dim</span>(rs)</span></code></pre></div>
 <pre><code>## [1] 27  4</code></pre>
 <div class="sourceCode" id="cb23"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb23-1"><a href="finding-datasets-of-interest.html#cb23-1" tabindex="-1"></a><span class="fu">head</span>(rs[, <span class="fu">c</span>(<span class="st">&#39;gse&#39;</span>,<span class="st">&#39;title&#39;</span>)])</span></code></pre></div>
-<pre><code>##         gse
-## 1 GSE192898
-## 2 GSE197320
-## 3 GSE200852
-## 4 GSE201223
-## 5 GSE201337
-## 6 GSE201525
-##                                                                                                            title
-## 1                                              Single cell 5&#39; RNA sequencing of 9 Korean ovarian cancer patients
-## 2                        Therapeutic Targeting of Ovarian Cancer Stem Cells Using Estrogen Receptor Beta Agonist
-## 3                                                          The microRNA profiles of ovarian clear cell carcinoma
-## 4                 Zinc increases hormone receptor expression in human ovarian granulosa cells and gene profiling
-## 5 Investigation of the anti-tumour properties of interferon epsilon in high grade serous ovarian cancer in vivo.
-## 6          Investigation of the anti-tumour properties of interferon epsilon in high grade serous ovarian cancer</code></pre>
+<pre><code>##         gse                                                                                                          title
+## 1 GSE192898                                              Single cell 5&#39; RNA sequencing of 9 Korean ovarian cancer patients
+## 2 GSE197320                        Therapeutic Targeting of Ovarian Cancer Stem Cells Using Estrogen Receptor Beta Agonist
+## 3 GSE200852                                                          The microRNA profiles of ovarian clear cell carcinoma
+## 4 GSE201223                 Zinc increases hormone receptor expression in human ovarian granulosa cells and gene profiling
+## 5 GSE201337 Investigation of the anti-tumour properties of interferon epsilon in high grade serous ovarian cancer in vivo.
+## 6 GSE201525          Investigation of the anti-tumour properties of interferon epsilon in high grade serous ovarian cancer</code></pre>
 </div>
 <div id="heuristic-require-a-counts-like-supplementary-file" class="section level2 hasAnchor" number="5.4">
 <h2><span class="header-section-number">5.4</span> Heuristic: require a counts-like supplementary file<a href="finding-datasets-of-interest.html#heuristic-require-a-counts-like-supplementary-file" class="anchor-section" aria-label="Anchor link to header"></a></h2>
@@ -267,16 +263,11 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <span id="cb25-18"><a href="finding-datasets-of-interest.html#cb25-18" tabindex="-1"></a>  <span class="fu">tail</span>(<span class="fu">unlist</span>(<span class="fu">strsplit</span>(x, <span class="st">&quot;/&quot;</span>)), <span class="at">n =</span> <span class="dv">1</span>)</span>
 <span id="cb25-19"><a href="finding-datasets-of-interest.html#cb25-19" tabindex="-1"></a>}))</span>
 <span id="cb25-20"><a href="finding-datasets-of-interest.html#cb25-20" tabindex="-1"></a><span class="fu">head</span>(shortened, <span class="dv">10</span>)</span></code></pre></div>
-<pre><code>##  [1] &quot;GSE252379_samples_attr.txt.gz&quot;                                           
-##  [2] &quot;GSE235755_raw_counts_batch_adjusted.txt.gz&quot;                              
-##  [3] &quot;GSE231560_OV90_TPM1.counts.txt.gz&quot;                                       
-##  [4] &quot;GSE227276_MTF_KD_KURAMOCHI_FT246.sorted.htseq-count.TPM.txt.gz&quot;          
-##  [5] &quot;GSE223011_Nijhuis_KURAMOCHI_VC_INDISULAM_humanCounts.tsv.xlsx&quot;           
-##  [6] &quot;GSE222982_supplementary_file_estimated_raw_counts_for_all_samples.txt.gz&quot;
-##  [7] &quot;GSE212702_RNA_seq_count_table.xlsx&quot;                                      
-##  [8] &quot;GSE207094_raw_counts.txt.gz&quot;                                             
-##  [9] &quot;GSE202601_human_ovary_snRNA-seq_metadata.txt.gz&quot;                         
-## [10] &quot;GSE201337_PDX_IFN_UMI_counts.csv.gz&quot;</code></pre>
+<pre><code>##  [1] &quot;GSE252379_samples_attr.txt.gz&quot;                                            &quot;GSE235755_raw_counts_batch_adjusted.txt.gz&quot;                              
+##  [3] &quot;GSE231560_OV90_TPM1.counts.txt.gz&quot;                                        &quot;GSE227276_MTF_KD_KURAMOCHI_FT246.sorted.htseq-count.TPM.txt.gz&quot;          
+##  [5] &quot;GSE223011_Nijhuis_KURAMOCHI_VC_INDISULAM_humanCounts.tsv.xlsx&quot;            &quot;GSE222982_supplementary_file_estimated_raw_counts_for_all_samples.txt.gz&quot;
+##  [7] &quot;GSE212702_RNA_seq_count_table.xlsx&quot;                                       &quot;GSE207094_raw_counts.txt.gz&quot;                                             
+##  [9] &quot;GSE202601_human_ovary_snRNA-seq_metadata.txt.gz&quot;                          &quot;GSE201337_PDX_IFN_UMI_counts.csv.gz&quot;</code></pre>
 </div>
 <div id="require-a-minimum-number-of-samples-per-series" class="section level2 hasAnchor" number="5.5">
 <h2><span class="header-section-number">5.5</span> Require a minimum number of samples per series<a href="finding-datasets-of-interest.html#require-a-minimum-number-of-samples-per-series" class="anchor-section" aria-label="Anchor link to header"></a></h2>

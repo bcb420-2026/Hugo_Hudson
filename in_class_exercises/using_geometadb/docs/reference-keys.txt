@@ -14,4 +14,5 @@ add-a-topic-keyword-e.g.-ovarian
 heuristic-require-a-counts-like-supplementary-file
 require-a-minimum-number-of-samples-per-series
 exercises-inspect-specific-geo-series
+exercise-answers
 next-week-next-steps
