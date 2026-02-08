@@ -1,0 +1,96 @@
+---
+title: "DatasetSelection"
+output: html_document
+---
+
+
+```{r}
+library(GEOmetadb)
+if (!file.exists('GEOmetadb.sqlite')) getSQLiteFile()
+file.info('GEOmetadb.sqlite')
+library(DBI)
+library(RSQLite)
+con <- dbConnect(SQLite(), 'GEOmetadb.sqlite')
+```
+
+Since I want a human dataset, I want to restrict the samples by organism type which is in the gsm table. This means that gse and gsm need to be joined.
+```{r}
+query <- paste(
+  "SELECT DISTINCT gse.gse, gse.title, gsm.organism_ch1, gsm.organism_ch2",
+  "FROM GSE JOIN gse_gsm ON gse_gsm.gse = gse.gse",
+  "JOIN gsm ON gse_gsm.gsm = gsm.gsm"
+)
+(query_results <- dbGetQuery(con, query))
+dbListTables(con)
+dbListFields(con, "gse")
+dbListFields(con, "gpl")
+dbListFields(con, "gsm")
+```
+
+
+
+```{r}
+query <- paste(
+  "SELECT DISTINCT gse.gse, gse.title, gpl.technology, gpl.organism",
+  "FROM GSE JOIN gse_gpl ON gse_gpl.gse = gse.gse",
+  "JOIN gpl ON gse_gpl.gpl = gpl.gpl",
+  "WHERE gpl.organism LIKE 'Homo Sapiens' AND",
+  "gse.title LIKE '%Brain%' AND",
+  "gpl.technology LIKE 'high-throughput sequencing'"
+
+)
+(query_results <- dbGetQuery(con, query))
+dbListTables(con)
+dbListFields(con, "gse")
+dbListFields(con, "gpl")
+dbListFields(con, "gsm")
+```
+
+Through looking at GSE title, I curated a list of GSE identifiers that I am interested in pursuing.
+```{r}
+GEO_LIST <- c('GSE101521', 'GSE110716', 'GSE162414', 'GSE42608', 'GSE53239')
+validation_query <- paste(
+  "SELECT DISTINCT gse.gse, gse.title, gse.repeats, gse.repeats_sample_list, gse.submission_date",
+  "FROM GSE",
+  "WHERE gse.gse IN ('GSE101521', 'GSE110716', 'GSE162414', 'GSE42608', 'GSE53239')"
+)
+(allowed_datasets <- dbGetQuery(con, validation_query))
+```
+
+```{r}
+
+specific_query <- paste(
+  "SELECT DISTINCT gse.gse",
+  "FROM GSE JOIN gse_gsm ON gse_gsm.gse = gse.gse",
+  "JOIN GSM ON gse_gsm.gsm = gsm.gsm",
+  "WHERE gse_gsm.gse = 'GSE162414'"
+)
+
+dbGetQuery(con, specific_query)
+```
+
+
+```{r}
+query <- paste(
+  "SELECT DISTINCT gse.gse, gse.title, gpl.technology, gpl.organism, gse.submission_date",
+  "FROM GSE JOIN gse_gpl ON gse_gpl.gse = gse.gse",
+  "JOIN gpl ON gse_gpl.gpl = gpl.gpl",
+  "WHERE gpl.organism LIKE 'Homo Sapiens' AND",
+  "gse.title LIKE '%Brain%' AND",
+  "gpl.technology LIKE 'high-throughput sequencing' AND",
+  "gse.submission_date > 2024-01-01"
+)
+(query_results <- dbGetQuery(con, query))
+
+idek <- paste(
+  "SELECT DISTINCT gse_gsm.gse",
+  "FROM gse_gsm",
+  "WHERE gse_gsm.gse = 'GSE162414'"
+)
+dbGetQuery(con, idek)
+q2 <- paste(
+  "SELECT DISTINCT gse.gse"
+)
+```
+
+
