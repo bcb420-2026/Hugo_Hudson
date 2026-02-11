@@ -1,0 +1,279 @@
+---
+title: "Differential Gene Expression Analysis of a Dystrophin Mutation on Heart Tissues"
+author: "Hugo Hudson"
+bibliography: references.bib
+nocite: '@*'
+output: 
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    code_folding: hide
+---
+
+# Introduction
+
+---
+Why is the data of interest to me?
+What are the control and test conditions?
+How many samples of each?
+Use figures from the paper to help explain the data.
+
+Duchenne muscular dystrophy (DMD) is a neuromuscular disease that effects the stability of tissues throughout the body. The study GSE199242 explores the use of human models for DMD through cultivating both 2D & 3D cell cultures of human induced pluripotent stem cell derived cardiomyocytes (hiPSC-CMs) to better understand the pathology in humans. To replicate the pathology they took their control cell lines, and used CRISPR based gene editing of the dystrophin gene to cause a truncated form of the dystrophin, replicating the pathological state. The dataset consists of 3 control samples and 3 mutated samples for both the 2D cell culture 3D cell culture where control is bulk RNA-seq of hiPSC-CMs and the mutated group . I will be utilizing only the 3D cell-culture samples as it more closely resembles the human tissue environment. I selected this dataset due to the nature of DMD, as the large effect throughout body due to a minimal mutation in the DNA of the dystrophin gene. Moreover the need for tightly regulating the DNA sequence of the gene is interesting. Additionally, the study is intriguing in opening a direction for further DMD researchers to pivot from animal models such as mouse to a more reproducible and closer resembling 3D cell culture.
+
+
+# Gene Identifier Mapping
+
+***
+
+### Dataset Setup
+
+Initially, to start gene identifier mapping the relevant packages are loaded as well as querying the GEO accession identifier for the study. In this case the samples were all present in a single compressed comma separated file, removing the need for any concatenation of files. Given that this analysis is focusing on the shift in expression from the control 3D culture to mutation induced 3D, the data is subset to include only the 3D cell cultures for optimized analysis.
+
+```{r, message = FALSE}
+library(GEOquery)
+library(biomaRt)
+library(readr)
+library(dplyr)
+library(stringr)
+library(limma)
+library(ggplot2)
+library(knitr)
+library(ComplexHeatmap)
+library(patchwork)
+
+# If not downloaded query the data:
+ACCESION_ID <- "GSE199242"
+dir.create("data")
+supp <- GEOquery::getGEOSuppFiles(ACCESION_ID, makeDirectory = TRUE, baseDir="data")
+
+# Load in the counts matrix, it is already provided with columns corresponding to samples
+counts_matrix <- readr::read_csv("data/GSE199242/GSE199242_countMatrix_2D+3D.csv.gz", show_col_types=FALSE)
+
+# Since the data also contains for 2D organoid, that should be excluded for memory management as well as length column
+matrix_excluding_2d <- counts_matrix[,1:8]
+relevant_counts_matrix <- matrix_excluding_2d[,-2]
+```
+
+### Mapping To HGNC
+
+The formatted counts matrix contains the number of reads per sample for each ensembl identifier. In this case, we want to work with the more intepretable HGNC gene names, so the ensembl identifiers are removed of their versions to map more generally to HGNC using the bioMart package. In doing so, I identified 18188 genes that did not have an equivalent HUGO gene identifier and 56 genes having a non-unique HUGO identifier within the dataset. Ensembl genes unable to map to HGNC were removed from downstream processing to evaluate the gene expression changes of common known genes. The duplicated expression values are summed to preserve any signal from different isoforms or incomplete read matches, as opposed to losing signal through averaging.
+
+```{r, warning=FALSE}
+# Remove versions of Ensembl identifiers and add them as a new column for mapping.
+stripped_ids <- sapply(strsplit(relevant_counts_matrix$GeneID, split = ".", fixed =TRUE), function(x) x[1])
+relevant_counts_matrix$ensembl_gene_id <- stripped_ids
+
+# Setup BioMart - Version 115 is pinned to keep results consistent in case of new release.
+ensembl_version <- useEnsembl(biomart = "ensembl", version = "115")
+
+# Specify the human ensembl gene identifiers out of available organisms
+ensembl_dataset <- useDataset("hsapiens_gene_ensembl", mart=ensembl_version)
+
+# Map from Ensembl to HUGO (HGNC identifiers)
+gene_ensembl_to_hgnc_mapping <- getBM(attributes = c("ensembl_gene_id", "hgnc_symbol"), filters="ensembl_gene_id", values=relevant_counts_matrix$ensembl_gene_id, mart= ensembl_dataset)
+
+# Add HGNC as a column
+hgnc_matrix <- merge(relevant_counts_matrix, gene_ensembl_to_hgnc_mapping, by="ensembl_gene_id")
+
+# Remove unmapped genes (no hgnc symbol found)
+mapped_only_matrix <- hgnc_matrix[hgnc_matrix$hgnc_symbol != "", ]
+# Sum the counts of duplicate genes as we need unique gene symbols
+samples_start_idx = 3
+samples_end_idx = 8
+unique_counts_matrix <- rowsum(mapped_only_matrix[samples_start_idx:samples_end_idx], group = mapped_only_matrix$hgnc_symbol)
+
+# print(paste("Number of unmapped genes:", sum(hgnc_matrix$hgnc_symbol == "")))
+# print(paste("Number of duplicate genes:", sum(duplicated(mapped_only_matrix$hgnc_symbol))))
+
+# Data checkpoint - saving the mapped matrix pre-filtering & normalization
+dir.create("data/checkpoints")
+saveRDS(unique_counts_matrix, "data/checkpoints/matrix_preQC.rds")
+```
+
+
+# Data Normalization
+
+***
+### Pre-Quality Control Visualization
+
+To fully assses the data quality both between the samples and between the groups, a boxplot and density plot are used.
+```{r, warning=FALSE}
+
+### Flatten the dataframe using pivot longer to get the counts for each gene from a sample, then log transform for box plot.
+plot_box <- function(counts_matrix, title = "", ylab = "log2(counts+1)") {
+  flattened_df <- counts_matrix |>
+    tidyr::pivot_longer(-hgnc_symbol, names_to = "sample_id", values_to = "value") |>
+    mutate(group = word(sample_id, 1, sep="_"))  |>
+    mutate(value = log2(value + 1))
+
+  ggplot(flattened_df, aes(x = sample_id, y = value, colour = group)) +
+    geom_boxplot(outlier.size = 0.2) +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
+    labs(title = title, x = "Sample", y = ylab)
+}
+box <- plot_box(cbind(unique_counts_matrix, hgnc_symbol = rownames(unique_counts_matrix)))
+
+
+# Flatten the data frame again to get per gene per sample counts then use ggplot density function
+plot_density <- function(counts_matrix, main = "") {
+  flattened_df <- counts_matrix |>
+    tidyr::pivot_longer(-hgnc_symbol, names_to = "sample_id", values_to = "value") |>
+    mutate(group = word(sample_id, 1, sep="_"))  |>
+    mutate(value = log2(value + 1))
+
+  ggplot(flattened_df, aes(x = value, colour = sample_id)) +
+    geom_density() +
+    theme_bw() +
+    labs(title = main, x = "log2(counts+1)", y = "Density") +
+    guides(colour = "none")
+}
+
+### Combine into side by side plots
+density_dist <- plot_density(cbind(unique_counts_matrix, hgnc_symbol = rownames(unique_counts_matrix)))
+box + density_dist + plot_annotation(tag_levels="A", title="Figure 1", caption = str_wrap("Figure 1: A) Box and whisker plots of each control (WT) and dystrophin-mutation (DMD) samples. Each quartile in the box represent the log counts of expression. Expression is consistent across samples. B) Density plot showing the distribution of log2 counts across all samples. Highly overlapping curves across samples.", width = 100))
+```
+
+The quartiles in figure 1A with the lower, median and upper are consistent across all samples with red and blue indicating that within and across groups demonstrate this consitency in reads throughout. The upper whisker does deviate partially between each sample suggesting a differing maximum number of reads expressed in each sample with sample 1 having the highest expression in both the control and mutation groups. Regarding the density of reads found there is a peak around 10 log2 counts and a global peak at 0 suggesting that most genes do not have any expression and for genes that are expressed this is mostly at around a frequency of 10 log2counts. Additionally, the uniform nature of the samples across the density distributions is indicative of consistent coverage captured across each of the samples.
+
+
+
+### Filtering & Normalization
+How many outliers were removed?
+kept if high in at least one group.
+
+The data is filtered prior to normalization to facilitate a more biologically accurate normalization. The samples are grouped using a design matrix based on if they are a part of the control group or the mutation-containing group. Then any missing values are removed as well as values below 3 reads which preserves the gene if this threshold is met in at least one group. Group based filtering of expression is useful as it preserves low counts in the event that it is consistent in a group to retain biological variation. Based on Figure panels 1A and 1B there are no identifiable outliers in read coverage, moreover all samples will be used.
+
+```{r}
+# Load from checkpoint if previously saved
+if (file.exists("data/checkpoints/matrix_preQC.rds")) hgnc_matrix <- readRDS("data/checkpoints/matrix_preQC.rds")
+
+samples_start_idx = 3
+samples_end_idx = 8
+min_reads = 3
+
+# Build list of sample groups - by indexing for WT substring
+mutation_mask <- rep(FALSE,length(unique_counts_matrix))
+mutation_mask[grep(pattern="WT", colnames(unique_counts_matrix))] <- TRUE
+# Convert boolean mask to the group names
+groups <- ifelse(mutation_mask,"wildtype","mutation")
+
+# Creating a design matrix corresponding to control vs mutation-present groups
+group_design_mat <- model.matrix(~ 0 + groups)
+
+# Check for NA / Filter
+unique_counts_matrix <- unique_counts_matrix[-which(is.na(unique_counts_matrix)),]
+
+# Use design matrix to filter out small number of reads - if present throughout group then kept
+passing_genes_idx <- edgeR::filterByExpr(unique_counts_matrix, min.count = min_reads, design = group_design_mat)
+filtered_genes_counts <- unique_counts_matrix[passing_genes_idx,]
+
+# Data normalization via TMM
+dge <- edgeR::DGEList(counts = filtered_genes_counts, group = groups)
+dge_with_norm_factors <- edgeR::calcNormFactors(dge, method = "TMM")
+
+```
+
+### Post-Normalization Visualization
+
+After transforming the counts with normalization the resulting matrix can be replotted for comparing read coverage similar to figure 1.
+```{r}
+# Takes dataframe, so convert from matrix to df
+normalied_counts_df <- as.data.frame(dge_with_norm_factors$counts)
+# Add the gene names as a column
+normalied_counts_df <- cbind(normalied_counts_df, hgnc_symbol = rownames(dge_with_norm_factors))
+# Call each plotting function
+post_norm_box <- plot_box(normalied_counts_df)
+post_norm_density <- plot_density(normalied_counts_df)
+post_norm_box + post_norm_density + plot_annotation(tag_levels="A", title="Figure 2", caption = str_wrap("Figure 2: A) Box and whisker plots of each control (WT) and dystrophin-mutation (DMD) samples. Each quartile in the box represent the log counts of expression. Expression is consistent across samples. B) Density plot showing the distribution of log2 counts across all samples. Highly overlapping curves across samples.", width = 100))
+```
+After filtering and normalizing the samples maintain their similar quartile values with the exception of the quarters shifting up, such as the medium from approximately 2.5 log counts to approximately 7.6 log counts. This shift is also consistent with the change in density where the maximum density is now focused around the local maximum in the pre-normalization density. Figure 2B contextualizes the removal of lowly expressed reads as the low to zero counts range now has a close to zero density, accounting for less of the normalized counts matrix. 
+
+
+# Differential Gene Expression
+
+***
+### Performing Differential Expression
+
+Due to the limited number of replicates in the study, limma was selected for differential expression analysis. Due to the Bayesian approach utilized in its model fitting it adjusts the variance per gene to achieve an intermediate variance which is beneficial for the few samples as it can reduce the impact of incidental fluctuations in reads on the remaining samples in the group. First, a linear model is fit, then the difference between the mutation-induced and control group is computed and finally the variance is adjusted calculating the differentially expressed genes. 
+
+```{r}
+if (file.exists("data/checkpoints/matrix_postNorm.rds")) {
+  norm_rds <- readRDS("data/checkpoints/matrix_postNorm.rds")
+  dge_with_norm_factors <- norm_rds$dge_with_norm_factors
+}
+
+# Log2 CPM transform the counts (also takes the normalization factors into account)
+cpm_transform <- voom(dge_with_norm_factors, group_design_mat)
+# Fit general linear model with coefficient for groups
+initial_model_fit <- lmFit(cpm_transform, group_design_mat)
+
+# Fit mutation with respect to wild type
+cont.matrix <- makeContrasts('MutVSwt' = groupsmutation - groupswildtype, levels=group_design_mat)
+initial_contrasts_fit <- contrasts.fit(initial_model_fit, cont.matrix)
+# Fit variance adjusted model
+fit_contrasts <- eBayes(initial_contrasts_fit)
+
+# Visualize results via p-value
+model_results <- topTable(fit_contrasts, coef = "MutVSwt", number = Inf, sort.by="P")
+kable(head(model_results,20), caption="Top 20 Differentially Expressed genes")
+
+```
+
+
+
+```{r, warning=FALSE}
+
+# filter for top hits by p-value then map to their cpm
+number_genes_to_show = 100
+heatmap_matrix_top_hits <- cpm_transform$E[rownames(model_results[1:number_genes_to_show,]),]
+
+z_score_cpm_matrix <- t(scale(t(heatmap_matrix_top_hits)))
+p_value <- Heatmap(z_score_cpm_matrix, show_row_names = FALSE, name="Z-Score Expression")
+draw(p_value)
+grid.text(str_wrap("Figure 3: Heatmap of the top 100 differentially expressed genes based on p-value. Expression is z-scored counts per million.",width=100), x= 0.32,y=0.0, gp = gpar(fontsize = 8))
+
+model_results_FC <- topTable(fit_contrasts, number = Inf, sort.by = "logFC")
+heatmap_matrix_top_hits_FC <- cpm_transform$E[rownames(model_results_FC[1:number_genes_to_show,]),]
+z_score_cpm_matrix_FC <- t(scale(t(heatmap_matrix_top_hits_FC)))
+logfc <- Heatmap(z_score_cpm_matrix_FC, show_row_names = FALSE, name="Z-Score Expression")
+logfc
+
+```
+The top 100 hits based on p-value for differential expression are visualized in Figure 5, with the left half of columns pertaining to the control group and the right half mutation-induced. Based on the plot these 100 genes have two distinct groups with opposing trends, as a subset of the control group has up-regulated expression and the remaining subset is down regulated. When compared to the mutation-induced group the subsets flip, where down regulated genes become up-regulated and vice versa. If using the highest log fold change candidates for evaluating changes in expression, similar trends are observed between the groups yet with attenuated signal as more of the genes are populated around 0 z-scored expression.
+
+### Visualizing DEG
+
+```{r, message=FALSE}
+
+# Calculate and add column if p-value is under threshold
+volcano_df <- model_results  %>%
+  tibble::rownames_to_column("hgnc") %>%
+  mutate(sig = adj.P.Val < 0.05)
+
+# Plot fold change by p-value color coded by threshold passing
+ggplot(volcano_df, aes(x = logFC, y = -log10(P.Value), color = sig)) +
+  geom_point(alpha = 0.6) +
+  theme_minimal() +
+  labs(
+    title = "Figure 4",
+    x = "log2 fold-change",
+    y = "-log10(p-value)",
+    color="Significance",
+    caption=str_wrap("Figure 4: Volcano plot of the differential expression between the dystrophin mutation containing group with respect to wildtype hiPSC-CMs.", width=100)
+  ) + theme(plot.caption = element_text(hjust = 0))
+
+```
+
+Using log fold-change in tandem with p-value the significant changes due to dystrophin can be expressed, seen in figure 4. Red points indicate non-significant results and are heavily populated. In addition, blue points represent changes that a statistically significant based on their adjusted p-value. There is an abundance of points that undergo a statistically change in regulation with the truncation of the dystrophin protein with the effect size densely populated within absolute value of 1 log fold change. Beyond this, drastic log fold changes are observed and statistically valid shown in the far left and right blue points of figure 4.
+
+# Conclusions
+
+***
+
+The 3D cell culture study investigating the mechanisms of dystrophin in Duchenne Muscular Dystrophy is a homogeneous dataset in data preparation as there is consistent read coverage across the study's samples. After normalizing the data and accounting the presence of duplicated genes, the differential gene expression analysis revealed a radical shift in genome-wide expression patterns between the wildtype Dystrophin and mutated Dystrophin genes. The genes that shift their direction of expression provide insights into possible DMD disease mechanism due to their relational change but a causal link is not identifiable here.
+
+# References
+
+***
