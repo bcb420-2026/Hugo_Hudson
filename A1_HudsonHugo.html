@@ -1598,28 +1598,26 @@ Dystrophin Mutation on Heart Tissues</h1>
 <div id="introduction" class="section level1">
 <h1>Introduction</h1>
 <hr />
-<p>Why is the data of interest to me? What are the control and test
-conditions? How many samples of each? Use figures from the paper to help
-explain the data.</p>
 <p>Duchenne muscular dystrophy (DMD) is a neuromuscular disease that
 effects the stability of tissues throughout the body. The study
 GSE199242 explores the use of human models for DMD through cultivating
 both 2D &amp; 3D cell cultures of human induced pluripotent stem cell
 derived cardiomyocytes (hiPSC-CMs) to better understand the pathology in
-humans. To replicate the pathology they took their control cell lines,
-and used CRISPR based gene editing of the dystrophin gene to cause a
-truncated form of the dystrophin, replicating the pathological state.
-The dataset consists of 3 control samples and 3 mutated samples for both
-the 2D cell culture 3D cell culture where control is bulk RNA-seq of
-hiPSC-CMs and the mutated group . I will be utilizing only the 3D
-cell-culture samples as it more closely resembles the human tissue
-environment. I selected this dataset due to the nature of DMD, as the
-large effect throughout body due to a minimal mutation in the DNA of the
-dystrophin gene. Moreover the need for tightly regulating the DNA
-sequence of the gene is interesting. Additionally, the study is
-intriguing in opening a direction for further DMD researchers to pivot
-from animal models such as mouse to a more reproducible and closer
-resembling 3D cell culture.</p>
+humans (<span class="citation">Bremner et al. (2022)</span>). To
+replicate the pathology they took their control cell lines, and used
+CRISPR based gene editing of the dystrophin gene to cause a truncated
+form of the dystrophin, replicating the pathological state. The dataset
+consists of 3 control samples and 3 mutated samples for both the 2D cell
+culture 3D cell culture where control is bulk RNA-seq of hiPSC-CMs and
+the mutated group . I will be utilizing only the 3D cell-culture samples
+as it more closely resembles the human tissue environment. I selected
+this dataset due to the nature of DMD, as the large effect throughout
+body due to a minimal mutation in the DNA of the dystrophin gene.
+Moreover the need for tightly regulating the DNA sequence of the gene is
+interesting. Additionally, the study is intriguing in opening a
+direction for further DMD researchers to pivot from animal models such
+as mouse to a more reproducible and closer resembling 3D cell
+culture.</p>
 </div>
 <div id="gene-identifier-mapping" class="section level1">
 <h1>Gene Identifier Mapping</h1>
@@ -1824,9 +1822,9 @@ density, accounting for less of the normalized counts matrix.</p>
 <div id="performing-differential-expression" class="section level3">
 <h3>Performing Differential Expression</h3>
 <p>Due to the limited number of replicates in the study, limma was
-selected for differential expression analysis. Due to the Bayesian
+selected for differential expression analysis (<span class="citation">Ritchie et al. (2015)</span>). Due to the Bayesian
 approach utilized in its model fitting it adjusts the variance per gene
-to achieve an intermediate variance which is beneficial for the few
+to achieve a common variance value which is beneficial for the few
 samples as it can reduce the impact of incidental fluctuations in reads
 on the remaining samples in the group. First, a linear model is fit,
 then the difference between the mutation-induced and control group is
@@ -2047,6 +2045,7 @@ kable(head(model_results,20), caption=&quot;Top 20 Differentially Expressed gene
 </tr>
 </tbody>
 </table>
+<pre class="r"><code># print(paste(&quot;Number of genes passing correction&quot;, length(model_results$adj.P.Val &lt; 0.05)))</code></pre>
 <pre class="r"><code># filter for top hits by p-value then map to their cpm
 number_genes_to_show = 100
 heatmap_matrix_top_hits &lt;- cpm_transform$E[rownames(model_results[1:number_genes_to_show,]),]
@@ -2084,10 +2083,13 @@ these 100 genes have two distinct groups with opposing trends, as a
 subset of the control group has up-regulated expression and the
 remaining subset is down regulated. When compared to the
 mutation-induced group the subsets flip, where down regulated genes
-become up-regulated and vice versa. If using the highest log fold change
-candidates for evaluating changes in expression, similar trends are
-observed between the groups yet with attenuated signal as more of the
-genes are populated around 0 z-scored expression.</p>
+become up-regulated and vice versa. There are 20,475 genes that pass
+p-value correction since this visualization contains only 100 of the
+genes this trend could represent a larger fraction of the passing genes.
+If using the highest log fold change candidates for evaluating changes
+in expression, similar trends are observed between the groups yet with
+attenuated signal as more of the genes are populated around 0 z-scored
+expression.</p>
 <div id="visualizing-deg" class="section level3">
 <h3>Visualizing DEG</h3>
 <p>To visualize the significance of changes in gene expression a volcano
@@ -2170,14 +2172,33 @@ Powers Differential Expression Analyses for <span>RNA</span>-Sequencing
 and Microarray Studies.”</span> <em>Nucleic Acids Research</em> 43 (7):
 e47–47. <a href="https://doi.org/10.1093/nar/gkv007">https://doi.org/10.1093/nar/gkv007</a>.
 </div>
+<div id="ref-robinson_edger_2010" class="csl-entry">
+Robinson, Mark D., Davis J. McCarthy, and Gordon K. Smyth. 2010.
+<span>“<span class="nocase">edgeR</span> : A <span>Bioconductor</span>
+Package for Differential Expression Analysis of Digital Gene Expression
+Data.”</span> <em>Bioinformatics</em> 26 (1): 139–40. <a href="https://doi.org/10.1093/bioinformatics/btp616">https://doi.org/10.1093/bioinformatics/btp616</a>.
+</div>
 <div id="ref-smedley_biomart_2009" class="csl-entry">
 Smedley, Damian, Syed Haider, Benoit Ballester, et al. 2009.
 <span>“<span>BioMart</span> – Biological Queries Made Easy.”</span>
 <em>BMC Genomics</em> 10 (1): 22. <a href="https://doi.org/10.1186/1471-2164-10-22">https://doi.org/10.1186/1471-2164-10-22</a>.
 </div>
+<div id="ref-stodden_implementing_2014" class="csl-entry">
+Stodden, Victoria, Friedrich Leisch, and Roger D. Peng, eds. 2014.
+<em>Implementing Reproducible Research</em>. Online-Ausg. The
+<span>R</span> <span>Series</span>. CRC Press.
+</div>
 <div id="ref-wickham_data_2016" class="csl-entry">
 Wickham, Hadley. 2016. <span>“Data <span>Analysis</span>.”</span> In
 <em>Ggplot2</em>. Springer International Publishing. <a href="https://doi.org/10.1007/978-3-319-24277-4_9">https://doi.org/10.1007/978-3-319-24277-4_9</a>.
+</div>
+<div id="ref-readr" class="csl-entry">
+Wickham, Hadley, Jim Hester, and Jennifer Bryan. 2025. <em>Readr: Read
+Rectangular Text Data</em>. <a href="https://readr.tidyverse.org">https://readr.tidyverse.org</a>.
+</div>
+<div id="ref-knitr" class="csl-entry">
+Xie, Yihui. 2025. <em>Knitr: A General-Purpose Package for Dynamic
+Report Generation in <span>R</span></em>. <a href="https://yihui.org/knitr/">https://yihui.org/knitr/</a>.
 </div>
 </div>
 </div>

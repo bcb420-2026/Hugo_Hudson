@@ -14,12 +14,8 @@ output:
 # Introduction
 
 ---
-Why is the data of interest to me?
-What are the control and test conditions?
-How many samples of each?
-Use figures from the paper to help explain the data.
 
-Duchenne muscular dystrophy (DMD) is a neuromuscular disease that effects the stability of tissues throughout the body. The study GSE199242 explores the use of human models for DMD through cultivating both 2D & 3D cell cultures of human induced pluripotent stem cell derived cardiomyocytes (hiPSC-CMs) to better understand the pathology in humans. To replicate the pathology they took their control cell lines, and used CRISPR based gene editing of the dystrophin gene to cause a truncated form of the dystrophin, replicating the pathological state. The dataset consists of 3 control samples and 3 mutated samples for both the 2D cell culture 3D cell culture where control is bulk RNA-seq of hiPSC-CMs and the mutated group . I will be utilizing only the 3D cell-culture samples as it more closely resembles the human tissue environment. I selected this dataset due to the nature of DMD, as the large effect throughout body due to a minimal mutation in the DNA of the dystrophin gene. Moreover the need for tightly regulating the DNA sequence of the gene is interesting. Additionally, the study is intriguing in opening a direction for further DMD researchers to pivot from animal models such as mouse to a more reproducible and closer resembling 3D cell culture.
+Duchenne muscular dystrophy (DMD) is a neuromuscular disease that effects the stability of tissues throughout the body. The study GSE199242 explores the use of human models for DMD through cultivating both 2D & 3D cell cultures of human induced pluripotent stem cell derived cardiomyocytes (hiPSC-CMs) to better understand the pathology in humans (@bremner_full-length_2022). To replicate the pathology they took their control cell lines, and used CRISPR based gene editing of the dystrophin gene to cause a truncated form of the dystrophin, replicating the pathological state. The dataset consists of 3 control samples and 3 mutated samples for both the 2D cell culture 3D cell culture where control is bulk RNA-seq of hiPSC-CMs and the mutated group . I will be utilizing only the 3D cell-culture samples as it more closely resembles the human tissue environment. I selected this dataset due to the nature of DMD, as the large effect throughout body due to a minimal mutation in the DNA of the dystrophin gene. Moreover the need for tightly regulating the DNA sequence of the gene is interesting. Additionally, the study is intriguing in opening a direction for further DMD researchers to pivot from animal models such as mouse to a more reproducible and closer resembling 3D cell culture.
 
 
 # Gene Identifier Mapping
@@ -196,7 +192,7 @@ After filtering and normalizing the samples maintain their similar quartile valu
 ***
 ### Performing Differential Expression
 
-Due to the limited number of replicates in the study, limma was selected for differential expression analysis. Due to the Bayesian approach utilized in its model fitting it adjusts the variance per gene to achieve an intermediate variance which is beneficial for the few samples as it can reduce the impact of incidental fluctuations in reads on the remaining samples in the group. First, a linear model is fit, then the difference between the mutation-induced and control group is computed and finally the variance is adjusted calculating the differentially expressed genes. 
+Due to the limited number of replicates in the study, limma was selected for differential expression analysis (@ritchie_limma_2015). Due to the Bayesian approach utilized in its model fitting it adjusts the variance per gene to achieve a common variance value which is beneficial for the few samples as it can reduce the impact of incidental fluctuations in reads on the remaining samples in the group. First, a linear model is fit, then the difference between the mutation-induced and control group is computed and finally the variance is adjusted calculating the differentially expressed genes. 
 
 ```{r}
 if (file.exists("data/checkpoints/matrix_postNorm.rds")) {
@@ -219,6 +215,7 @@ fit_contrasts <- eBayes(initial_contrasts_fit)
 model_results <- topTable(fit_contrasts, coef = "MutVSwt", number = Inf, sort.by="P")
 kable(head(model_results,20), caption="Top 20 Differentially Expressed genes")
 
+# print(paste("Number of genes passing correction", length(model_results$adj.P.Val < 0.05)))
 ```
 
 
@@ -242,7 +239,7 @@ logfc <- Heatmap(z_score_cpm_matrix_FC, show_row_names = FALSE, name="Z-Score Ex
 logfc
 ```
 
-The top 100 hits based on p-value for differential expression are visualized in Figure 5, with the left half of columns pertaining to the control group and the right half mutation-induced. Based on the plot these 100 genes have two distinct groups with opposing trends, as a subset of the control group has up-regulated expression and the remaining subset is down regulated. When compared to the mutation-induced group the subsets flip, where down regulated genes become up-regulated and vice versa. If using the highest log fold change candidates for evaluating changes in expression, similar trends are observed between the groups yet with attenuated signal as more of the genes are populated around 0 z-scored expression.
+The top 100 hits based on p-value for differential expression are visualized in Figure 5, with the left half of columns pertaining to the control group and the right half mutation-induced. Based on the plot these 100 genes have two distinct groups with opposing trends, as a subset of the control group has up-regulated expression and the remaining subset is down regulated. When compared to the mutation-induced group the subsets flip, where down regulated genes become up-regulated and vice versa. There are 20,475 genes that pass p-value correction since this visualization contains only 100 of the genes this trend could represent a larger fraction of the passing genes.  If using the highest log fold change candidates for evaluating changes in expression, similar trends are observed between the groups yet with attenuated signal as more of the genes are populated around 0 z-scored expression.
 
 ### Visualizing DEG
 
