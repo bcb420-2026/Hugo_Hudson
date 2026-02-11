@@ -30,7 +30,7 @@ Duchenne muscular dystrophy (DMD) is a neuromuscular disease that effects the st
 
 Initially, to start gene identifier mapping the relevant packages are loaded as well as querying the GEO accession identifier for the study. In this case the samples were all present in a single compressed comma separated file, removing the need for any concatenation of files. Given that this analysis is focusing on the shift in expression from the control 3D culture to mutation induced 3D, the data is subset to include only the 3D cell cultures for optimized analysis.
 
-```{r, message = FALSE}
+```{r, message = FALSE, warning=FALSE}
 library(GEOquery)
 library(biomaRt)
 library(readr)

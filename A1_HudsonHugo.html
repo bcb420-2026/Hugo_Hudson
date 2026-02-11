@@ -1646,9 +1646,8 @@ library(patchwork)
 
 # If not downloaded query the data:
 ACCESION_ID &lt;- &quot;GSE199242&quot;
-dir.create(&quot;data&quot;)</code></pre>
-<pre><code>## Warning in dir.create(&quot;data&quot;): &#39;data&#39; already exists</code></pre>
-<pre class="r"><code>supp &lt;- GEOquery::getGEOSuppFiles(ACCESION_ID, makeDirectory = TRUE, baseDir=&quot;data&quot;)
+dir.create(&quot;data&quot;)
+supp &lt;- GEOquery::getGEOSuppFiles(ACCESION_ID, makeDirectory = TRUE, baseDir=&quot;data&quot;)
 
 # Load in the counts matrix, it is already provided with columns corresponding to samples
 counts_matrix &lt;- readr::read_csv(&quot;data/GSE199242/GSE199242_countMatrix_2D+3D.csv.gz&quot;, show_col_types=FALSE)
