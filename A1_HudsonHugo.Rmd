@@ -223,28 +223,30 @@ kable(head(model_results,20), caption="Top 20 Differentially Expressed genes")
 
 
 
-```{r, warning=FALSE}
+```{r fig.cap="A) Heatmap of expression counts (in counts-per-million) of the top 100 most signficantly changed genes using p-value.", warning=FALSE}
 
 # filter for top hits by p-value then map to their cpm
 number_genes_to_show = 100
 heatmap_matrix_top_hits <- cpm_transform$E[rownames(model_results[1:number_genes_to_show,]),]
 
 z_score_cpm_matrix <- t(scale(t(heatmap_matrix_top_hits)))
-p_value <- Heatmap(z_score_cpm_matrix, show_row_names = FALSE, name="Z-Score Expression")
-draw(p_value)
-grid.text(str_wrap("Figure 3: Heatmap of the top 100 differentially expressed genes based on p-value. Expression is z-scored counts per million.",width=100), x= 0.32,y=0.0, gp = gpar(fontsize = 8))
+p_value <- Heatmap(z_score_cpm_matrix, show_row_names = FALSE, name="Z-Score Expression", column_title = "Figure 3A")
+p_value
 
+```
+```{r fig.cap="B) Heatmap of expression counts (in counts-per-million) of the top 100 most log fold changed genes.", warning=FALSE}
 model_results_FC <- topTable(fit_contrasts, number = Inf, sort.by = "logFC")
 heatmap_matrix_top_hits_FC <- cpm_transform$E[rownames(model_results_FC[1:number_genes_to_show,]),]
 z_score_cpm_matrix_FC <- t(scale(t(heatmap_matrix_top_hits_FC)))
-logfc <- Heatmap(z_score_cpm_matrix_FC, show_row_names = FALSE, name="Z-Score Expression")
+logfc <- Heatmap(z_score_cpm_matrix_FC, show_row_names = FALSE, name="Z-Score Expression", column_title = "Figure 3B")
 logfc
-
 ```
+
 The top 100 hits based on p-value for differential expression are visualized in Figure 5, with the left half of columns pertaining to the control group and the right half mutation-induced. Based on the plot these 100 genes have two distinct groups with opposing trends, as a subset of the control group has up-regulated expression and the remaining subset is down regulated. When compared to the mutation-induced group the subsets flip, where down regulated genes become up-regulated and vice versa. If using the highest log fold change candidates for evaluating changes in expression, similar trends are observed between the groups yet with attenuated signal as more of the genes are populated around 0 z-scored expression.
 
 ### Visualizing DEG
 
+To visualize the significance of changes in gene expression a volcano plot can be and here the significance threshold uses false discovery rate (FDR) adjusted p-value. FDR is used to account for the large amount of false positives with the large amount of genes being used here as it transforms the p-value to be more stringent for signifance passing values.
 ```{r, message=FALSE}
 
 # Calculate and add column if p-value is under threshold
@@ -272,7 +274,7 @@ Using log fold-change in tandem with p-value the significant changes due to dyst
 
 ***
 
-The 3D cell culture study investigating the mechanisms of dystrophin in Duchenne Muscular Dystrophy is a homogeneous dataset in data preparation as there is consistent read coverage across the study's samples. After normalizing the data and accounting the presence of duplicated genes, the differential gene expression analysis revealed a radical shift in genome-wide expression patterns between the wildtype Dystrophin and mutated Dystrophin genes. The genes that shift their direction of expression provide insights into possible DMD disease mechanism due to their relational change but a causal link is not identifiable here.
+The 3D cell culture study investigating the mechanisms of dystrophin in Duchenne Muscular Dystrophy is a homogeneous dataset in data preparation as there is consistent read coverage across the study's samples. After normalizing the data and accounting the presence of duplicated genes, the differential gene expression analysis revealed a radical shift in genome-wide expression patterns between the wildtype dystrophin and mutated dystrophin genes. The genes that shift their direction of expression provide insights into possible DMD disease mechanism due to their relational change but a causal link is not identifiable here.
 
 # References
 
