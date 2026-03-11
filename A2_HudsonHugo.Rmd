@@ -27,7 +27,7 @@ source("a1_code.R")
 
 ### Thresholded Analysis
 
-For adding gene-set annotations to the enriched genes, a custom Gene Matrix Transpose (GMT) file was used. Specifically pre-done annotations from the Bader Lab to ensure consistency over time by instilling a specific version of gene-sets. The GMT was selected to have no pathway figure optical character recognition to use information solely from databases and not extracted from publication figures. Similarly, no inferred electronic annotations were added to the GMT to remain as experimentally derived gene-set annotations. After downloading this gene-set annotation file, I filtered out gene-sets based on size to limit extensive gene-sets to get more granular pathway annotations. As well as the maximum, I filtered for at least 10 genes in the gene-set to ensure annotations were biologically relevant and not due to artifacts in gene-expression. 
+For adding gene-set annotations to the enriched genes, a custom Gene Matrix Transpose (GMT) file was used. Specifically pre-done annotations from the Bader Lab to ensure consistency over time by instilling a specific version of gene-sets (@merico_enrichment_2010). The GMT was selected to have pathway figure optical character recognition to contain recent pathway information from publication figures not yet included in databases. However, no inferred electronic annotations were added to the GMT to remain as experimentally derived gene-set annotations for validity. After downloading this gene-set annotation file, I filtered out gene-sets based on size to limit extensive gene-sets to get more granular pathway annotations. As well as the maximum, I filtered for at least 10 genes in the gene-set to ensure annotations were biologically relevant and not due to artifacts in gene-expression. 
 
 ```{r, message=FALSE, warning=FALSE, results='hide'}
 tryCatch(expr = { library("GSA")}, 
@@ -90,6 +90,7 @@ write.table(x = format_genesets(filtered_gmt), file = gmt_write_path, quote = FA
 
 filtered_gmt_table <-GSA.read.gmt(gmt_write_path)
 
+# Upload GMT as custom organism source to be called.
 custom_gmt_10_150 <- upload_GMT_file(gmtfile=gmt_write_path)
 
 # Make rnk file, take first column and last column
@@ -99,10 +100,7 @@ clean_rnk_file <- na.omit(rnk_file)
 write.table(clean_rnk_file, file = rnk_out, row.names = FALSE, col.names=FALSE, quote = FALSE, sep="\t")
 ```
 
-The g:Profiler package was used for the thresholded over-representation analysis as it is a highly reputable and widely-used tool for this purpose as well as for its option for custom gene-set annotations and false detection rate. Since I am passing a list of 20,475 genes through for analysis the standard p-value will produce lots of false positives at the scale, so the Benjamini-Hochberg False Detection Rate method is utilized within G:Profiler.
-
-mention how I am using gscsc because of its allowance for dependencies that comply with GO.
-
+To conduct thresholded over-representation analysis to get enriched pathways, the g:Profiler package was used as it is highly reputable and has distinct algorithms for measuring dependence. Given that there were previously 20,475 genes identified as differentially regulated using Limma, using a standard p-value cutoff of 0.05 will suggest that 5% of postiives will be false positive which is detrimental at this scale. GSCS within g:Profiler was used for enrichment detection as takes into account the scale by adjusting the p-value similar to other methods such as FDR, however also allowing for dependence between genes which more closesly models this biological data (@reimand_gprofilerweb-based_2007).
 
 ***
 
@@ -110,10 +108,6 @@ mention how I am using gscsc because of its allowance for dependencies that comp
 ```{r, message=FALSE}
 
 gene_list <- rownames(model_results)
-
-# organism <- "hsapiens"
-# sources <- c("REAC", "WP", "GO:BP")
-# organism <- "custom_geneset" 
 
 # Query gprofiler for the provided gene list
 thresholded_results <- gost(query=gene_list, significant=FALSE, ordered_query=FALSE,correction_method="gSCS", organism=custom_gmt_10_150)
@@ -167,7 +161,7 @@ write.table(results_enriched, file = enrichment_path, row.names = FALSE, col.nam
 gostplot(thresholded_results, interactive = TRUE, capped = FALSE)
 ```
 
-```{r fig.cap="Figure 2: Enrichment plot showing the signfificance of mapped gene-sets from the Gene Matrix Transposed file for upregulated genes in the presence of a dystrophin mutation. Distribution along the x-axis does not indicate any change in value, only the y-axis with higher dots indicating more significant gene-sets."}
+```{r fig.cap="Figure 2: Enrichment plot showing the signfificance of mapped gene-sets from the Gene Matrix Transposed file for upregulated genes in the presence of a dystrophin mutation. Distribution along the x-axis does not indicate any change in value, only the y-axis with higher dots indicating more significant gene-sets.", warning=FALSE, message=FALSE}
 # Filter for upregulated genes, then get just the gene names.
 upregulated_genes_results <- model_results[model_results$logFC > 0,]
 upregulated_gene_list <- rownames(upregulated_genes_results)
@@ -177,7 +171,7 @@ upregulated_query <- gost(query=upregulated_gene_list, significant=FALSE, ordere
 gostplot(upregulated_query, interactive = TRUE, capped = FALSE)
 ```
 
-```{r fig.cap="Figure 3: Enrichment plot showing the signfificance of mapped gene-sets from the Gene Matrix Transposed file for down regulated genes in the presence of a dystrophin mutation. Distribution along the x-axis does not indicate any change in value, only the y-axis with higher dots indicating more significant gene-sets.", warning=FALSE}
+```{r fig.cap="Figure 3: Enrichment plot showing the signfificance of mapped gene-sets from the Gene Matrix Transposed file for down regulated genes in the presence of a dystrophin mutation. Distribution along the x-axis does not indicate any change in value, only the y-axis with higher dots indicating more significant gene-sets.", warning=FALSE, message=FALSE}
 # Filter for upregulated genes, then get just the gene names.
 downregulated_genes_results <- model_results[model_results$logFC < 0,]
 downregulated_gene_list <- rownames(downregulated_genes_results)
@@ -194,13 +188,13 @@ gostplot(downregulated_query, interactive = TRUE, capped = FALSE)
 ```
 
 
-When doing thresholded analysis and sub-setting based on up, down or all differentially regulated genes does impact the outcome. When computing enriched gene-set based on the entire list 257 such gene-sets were found, compared to 274 in the up-regulated only and 56 in the down regulated. The results in the g:Profiler analysis moderately agree with the original results from the paper as there is high correspondence between the down regulated pathways and low overlap in the up-regulated pathways. Interferon gamma response, defense response and ECM based remodeling are the more prominent down regulate pathways in the original paper which can be seen in the down regulated genes calculated here (Figure 3) indicated by the most significant response in the top left being interferon gamma response. Additionally, collage biosynthesis, fibril formation and viral response are among the most significant which is supportive of the original study. With regards to the up-regulated, the paper is enriched for muscle contraction, action potential generation, cardiac development and differentiation which are not observed in my analysis. Mainly gene-sets involved with cell cycle checkpoints and progression are found in the up-regulated. E2F and MYC are the most significant which are involved in cell differentiation and proliferation which is supportive, however muscle or cardiac specific gene-sets are not highly enriched.
+When doing thresholded analysis and sub-setting based on up, down or all differentially regulated genes does impact the outcome. Computing enriched gene-set based on the entire list identified 257 gene-sets, compared to 274 in the up-regulated only and 56 in the down regulated. The results in the g:Profiler analysis moderately agree with the original results from the paper as there is high correspondence between the down regulated pathways and low overlap in the up-regulated pathways. Interferon gamma response, defense response and ECM based remodeling are the more prominent down regulate pathways in the original paper which can be seen in the down regulated genes calculated here (Figure 3) indicated by the most significant response in the top left being interferon gamma response (@bremner_full-length_2022). Additionally, collagen biosynthesis, fibril formation and viral response are among the most significant which is supportive of the original study. With regards to the up-regulated, the paper is enriched for muscle contraction, action potential generation, cardiac development and cardiac-cell differentiation which are not observed in my analysis. Mainly gene-sets involved with cell cycle checkpoints, progression and senescence are found in the up-regulated. E2F and MYC are the most significant which are involved in cell differentiation and proliferation which is supportive, however muscle or cardiac specific gene-sets are not highly enriched. The increased or upregulated senescence observed is known and is supported which suggests that the gene-sets observed are more inclusive and not at a cell-type resolution as they are still substantiatied in literature but do not provide insights for cardiomycote specific pathways (@duan_duchenne_2021, @sugihara_cellular_2020).
 
 ### Non-thresholded Analysis
 
 ***
 
-For non-thresholded analysis the tool GSEA, version 4.4.0, was used and with the same initial GMT file provided by the BaderLab except the subsetting to a minimum of 15 and maximum of 200 was specified in GSEA as opposed to manually for g:Profiler. Number of permuattions was set to 2000 instead of 1000 to increase the approximation of the null distribution, as well as collapse being set to No_collapse as gene symbols ahve previously been mapped. Besides these specificaiton the rest of the parameters were used at their default values.
+For non-thresholded analysis the tool GSEA, version 4.4.0, was used and with the same initial GMT file provided by the BaderLab except the subsetting to a minimum of 15 and maximum of 200 was specified in GSEA as opposed to manually for g:Profiler (@merico_enrichment_2010). Number of permuattions was set to 2000 instead of 1000 to increase the approximation of the null distribution, as well as collapse being set to No_collapse as gene symbols ahve previously been mapped. Besides these specificaiton the rest of the parameters were used at their default values.
 
 
 ```{r fig.cap="Table 1: Table showing the 10 most enriched upregulated genes in DMD vs Control."}
@@ -211,17 +205,12 @@ knitr::include_graphics("/home/rstudio/projects/Hugo_Hudson/Figures/upregulated_
 knitr::include_graphics("/home/rstudio/projects/Hugo_Hudson/Figures/downregulated_GSEA.png")
 ```
 
-By using GSEA for a non-thresholded over-representation analysis,similar results were achieved when compared to g:Profiler. Regarding the down regulated gene-sets the most enriched are interferon gamma and alpha response, as well as the Extra cellular Matrix remodeling with integrin cell surface interactions. There is partial agreement with the up-regulated as GSEA identified components related to vesicular transport and secretion as well as DNA repair, cell cycle control. This corroborates the cell cycle and DNA enrichment from g:Profiler but also introduces novel enrichment with vesicular transport.
+By using GSEA for a non-thresholded over-representation analysis, similar results were achieved when compared to g:Profiler. Regarding the down regulated gene-sets the most enriched are interferon gamma and alpha response, as well as the Extra cellular Matrix remodeling with integrin cell surface interactions. There is partial agreement with the up-regulated as GSEA identified components related to vesicular transport, secretion as well as DNA repair and cell cycle control. This corroborates the cell cycle and DNA enrichment from g:Profiler but also introduces novel enrichment with vesicular transport. While not mentioned in the original GEO study, exosomes are implicated in DMD and their inhibition has been found to partially rescue the DMD phenotype due to specific miRNA cargo within the vesicle (@gartz_duchenne_2020 @yedigaryan_extracellular_2023). This supports the upregulated degradation and vesicular transport observed in the GSEA enriched gene-sets.
+
 
 # Visualizing GSEA
 
 ***
-Create an enrichment map - how many nodes and how many edges in the resulting map? What thresholds were used to create this map? Make sure to record all thresholds. Include a screenshot of your network prior to manual layout.
-Annotate your network - what parameters did you use to annotate the network. If you are using the default parameters make sure to list them as well.
-Make a publication ready figure - include this figure with proper legends in your notebook.
-Collapse your network to a theme network. What are the major themes present in this analysis? Do they fit with the model? Are there any novel pathways or themes?
-Present your results with the use of tables and screenshots. All figures should have appropriate figure legends.
-If using figures create a figures directory in your repo and make sure all references to the figures are relative in your Rmarkdown notebook.
 
 Cytoscape was used to visualize the results of the geneset enrichment analysis and built extensive gene network representing the gene-set enrichment. The positive and negatively enriched gene lists were taken from GSEA and inputted with the GMT and gene rank file into Cytoscape. In order to build a more accurate network, the FDR significance threshold for nodes was set to 0.01, alognside this the default sparsity value of 0.5 was used for edges.
 
@@ -231,12 +220,14 @@ knitr::include_graphics("/home/rstudio/projects/Hugo_Hudson/Figures/InitialView.
 ```{r fig.cap="Figure 5: Network showing clustered genesets enrichments from DMD and Control 3D cell cultures. Each cluster is represented by a coloured circle with an annotation for the cluster function."}
 knitr::include_graphics("/home/rstudio/projects/Hugo_Hudson/Figures/PublicationReady.png")
 ```
-The generated network is extensive and consists of 678 nodes and 2132 edges. From the initial layout of the network (Figure 4) there are multiple separated regions indicating inconsistency in the pathways and their interconnection as many nodes have a low degree and centrality. When using the auto annotation tool within Cyctoscape the gene-sets can be clustered based on their connectivity and function yielding a more interpretable network. In Figure 5, the large group annotation for dna hiv repair is similar to the observed DNA pathways in g:Profiler and GSEA.
+The generated network is extensive and consists of 678 nodes and 2132 edges. From the initial layout of the network (Figure 4) there are multiple separated regions indicating inconsistency in the pathways and their interconnection as many nodes have a low degree and centrality. When using the auto annotation tool within Cyctoscape the gene-sets can be clustered based on their connectivity and function yielding a more interpretable network. In Figure 5, the large group annotation for dna hiv repair is similar to the observed DNA pathways in g:Profiler and GSEA, however not in the context of HIV. Yet, this connection is supported by literature as DMD has been treated with an anti-HIV line of drugs, Nucleoside Reverse Transcriptase Inhibitors and led to wildtype phenotype rescue (@al-khalidi_zidovudine_2018). Outisde of the main cluster, other prominant clusters such as interferon and trafficking pathways are observed and consistent with previous thresholded results.  
+
 
 # Conclusions
 
 ***
 
+Pathways enrichment analysis of Duchenne Muscular Dystrophy provides useful and accurate insights into relevant mechanisms for the disease and its phenotypic progression. While thresholded & non-thresholded over-representation analysis had consistent results for negatively enriched pathways they differed in their positive enrichments leading to a more extensive characterisation of DMD. Notably, by identifying cellular senescence, altered cellular traficking and activation of HIV-related pathways. These identified pathways are highly supported by current literature and have been emphasized in research towards disease recovery. Given the consistency of the analysis with literature, using a 3D cell culture for modelling the progression of DMD as opposed to in vivo disease-models provides a reliable and non-invasive method for further study of the disease.
 
 
 # References
